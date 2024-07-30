@@ -63,7 +63,7 @@ public struct DismissPresentationButton<Label: View>: ActionLabelView {
 extension DismissPresentationButton where Label == Image {
     @available(OSX 11.0, *)
     public init(action: @escaping () -> Void = { }) {
-        self.init(action: action) {
+        self.init(closureAction: action) {
             Image(systemName: .xmarkCircleFill)
         }
     }

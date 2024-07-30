@@ -8,16 +8,15 @@ import SwiftUI
 public protocol ActionLabelView: View {
     associatedtype Label: View
     
-    init(action: @escaping () -> Void, @ViewBuilder label: () -> Label)
+    init(closureAction: @escaping () -> Void, @ViewBuilder label: () -> Label)
     init(action: Action, @ViewBuilder label: () -> Label)
 }
 
 // MARK: - Implementation-
 
 extension ActionLabelView {
-    @_disfavoredOverload
-    public init(action: @escaping () -> Void, @ViewBuilder label: () -> Label) {
-        self.init(action: .init(action), label: label)
+    public init(closureAction: @escaping () -> Void, @ViewBuilder label: () -> Label) {
+        self.init(action: .init(closureAction), label: label)
     }
 }
 
@@ -36,21 +35,21 @@ extension ActionLabelView {
         dismiss presentation: Binding<PresentationMode>,
         @ViewBuilder label: () -> Label
     ) {
-        self.init(action: { presentation.wrappedValue.dismiss() }, label: label)
+        self.init(closureAction: { presentation.wrappedValue.dismiss() }, label: label)
     }
     
     public init(
         dismiss presentation: PresentationManager,
         @ViewBuilder label: () -> Label
     ) {
-        self.init(action: { presentation.dismiss() }, label: label)
+        self.init(closureAction: { presentation.dismiss() }, label: label)
     }
     
     public init(
         toggle boolean: Binding<Bool>,
         @ViewBuilder label: () -> Label
     ) {
-        self.init(action: { boolean.wrappedValue.toggle() }, label: label)
+        self.init(closureAction: { boolean.wrappedValue.toggle() }, label: label)
     }
     
     @available(iOS 13.0, tvOS 13.0, *)
@@ -60,7 +59,7 @@ extension ActionLabelView {
         toggle editMode: Binding<EditMode>,
         @ViewBuilder label: () -> Label
     ) {
-        self.init(action: { editMode.wrappedValue.toggle() }, label: label)
+        self.init(closureAction: { editMode.wrappedValue.toggle() }, label: label)
     }
 }
 
@@ -69,7 +68,7 @@ extension ActionLabelView where Label == Image {
         systemImage: SFSymbolName,
         action: @escaping () -> Void
     ) {
-        self.init(action: action) {
+        self.init(closureAction: action) {
             Image(systemName: systemImage)
         }
     }
@@ -88,7 +87,7 @@ extension ActionLabelView where Label == Text {
         _ title: S,
         action: @escaping () -> Void
     ) {
-        self.init(action: action) {
+        self.init(closureAction: action) {
             Text(title)
         }
     }
