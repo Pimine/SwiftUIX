@@ -29,15 +29,16 @@ public struct PresentationLink<Destination: View, Label: View>: PresentationLink
     private let label: Label
     private let action: () -> Void
 
-    // On Xcode 27 / Swift 6.4 the `@State` macro fails to emit a linkable
-    // default-value initializer for `private` default-valued properties in a
-    // generic type (undefined "variable initialization expression" symbols at
-    // link time when e.g. `PresentationLink<Popover<_>, _>` is specialized).
-    // Marking them public forces the storage/init to be emitted and exported,
-    // matching the existing workaround used in `PaginationView`.
-    @State public var name: AnyHashable = UUID()
-    @State public var id: AnyHashable = UUID()
-    @State public var _internal_isPresented: Bool = false
+    // On Xcode 27 / Swift 6.4 `@State` is a macro whose generated default-value
+    // initializer is not emitted when a generic type also defines custom
+    // initializers, producing undefined "variable initialization expression"
+    // symbols at link time (e.g. when `PresentationLink<Popover<_>, _>` is
+    // specialized). The fix is to drop the declaration defaults and set these
+    // properties in the initializer instead.
+    // https://forums.swift.org/t/xcode-27-swift-6-4-compiler-regression-for-initializers/87246
+    @State private var name: AnyHashable
+    @State private var id: AnyHashable
+    @State private var _internal_isPresented: Bool
     
     private var isPresented: Binding<Bool> {
         let base = (_isPresented ?? $_internal_isPresented)
@@ -311,18 +312,36 @@ public struct PresentationLink<Destination: View, Label: View>: PresentationLink
 // MARK: - Initializers
 
 extension PresentationLink {
+    // Designated initializer. All public initializers funnel through this so the
+    // `@State` properties are initialized exactly once, explicitly, rather than
+    // through declaration defaults (see the note on the property declarations
+    // above for the Xcode 27 `@State`-macro reason).
+    private init(
+        _destination: Destination,
+        _isPresented: Binding<Bool>?,
+        _onDismiss: @escaping () -> Void,
+        label: Label,
+        action: @escaping () -> Void
+    ) {
+        self._destination = _destination
+        self._isPresented = _isPresented
+        self._onDismiss = _onDismiss
+
+        self.label = label
+        self.action = action
+
+        self.name = UUID()
+        self.id = UUID()
+        self._internal_isPresented = false
+    }
+
     public init(
         action: @escaping () -> Void,
         @ViewBuilder destination: () -> Destination,
         onDismiss: @escaping () -> () = { },
         @ViewBuilder label: () -> Label
     ) {
-        self._destination = destination()
-        self._onDismiss = onDismiss
-        self._isPresented = nil
-        
-        self.label = label()
-        self.action = action
+        self.init(_destination: destination(), _isPresented: nil, _onDismiss: onDismiss, label: label(), action: action)
     }
 
     public init(
@@ -330,53 +349,33 @@ extension PresentationLink {
         onDismiss: (() -> ())?,
         @ViewBuilder label: () -> Label
     ) {
-        self._destination = destination
-        self._onDismiss = onDismiss ?? { }
-        self._isPresented = nil
-        
-        self.label = label()
-        self.action = { }
+        self.init(_destination: destination, _isPresented: nil, _onDismiss: onDismiss ?? { }, label: label(), action: { })
     }
-    
+
     public init(
         destination: Destination,
         onDismiss: @escaping () -> () = { },
         @ViewBuilder label: () -> Label
     ) {
-        self._destination = destination
-        self._onDismiss = onDismiss
-        self._isPresented = nil
-        
-        self.label = label()
-        self.action = { }
+        self.init(_destination: destination, _isPresented: nil, _onDismiss: onDismiss, label: label(), action: { })
     }
-        
+
     public init(
         destination: Destination,
         isPresented: Binding<Bool>,
         onDismiss: @escaping () -> () = { },
         @ViewBuilder label: () -> Label
     ) {
-        self._destination = destination
-        self._onDismiss = onDismiss
-        self._isPresented = isPresented
-        
-        self.label = label()
-        self.action = { }
+        self.init(_destination: destination, _isPresented: isPresented, _onDismiss: onDismiss, label: label(), action: { })
     }
-    
+
     public init(
         isPresented: Binding<Bool>,
         onDismiss: @escaping () -> (),
         @ViewBuilder destination: () -> Destination,
         @ViewBuilder label: () -> Label
     ) {
-        self._destination = destination()
-        self._onDismiss = onDismiss
-        self._isPresented = isPresented
-        
-        self.label = label()
-        self.action = { }
+        self.init(_destination: destination(), _isPresented: isPresented, _onDismiss: onDismiss, label: label(), action: { })
     }
 
     public init(
@@ -384,48 +383,39 @@ extension PresentationLink {
         @ViewBuilder destination: () -> Destination,
         @ViewBuilder label: () -> Label
     ) {
-        self._destination = destination()
-        self._onDismiss = { }
-        self._isPresented = isPresented
-
-        self.label = label()
-        self.action = { }
+        self.init(_destination: destination(), _isPresented: isPresented, _onDismiss: { }, label: label(), action: { })
     }
-    
+
     public init(
         destination: Destination,
         isPresented: Binding<Bool>,
         @ViewBuilder label: () -> Label
     ) {
-        self._destination = destination
-        self._onDismiss = { }
-        self._isPresented = isPresented
-        
-        self.label = label()
-        self.action = { }
+        self.init(_destination: destination, _isPresented: isPresented, _onDismiss: { }, label: label(), action: { })
     }
-    
+
     public init<V: Hashable>(
         destination: Destination,
         tag: V,
         selection: Binding<V?>,
         @ViewBuilder label: () -> Label
     ) {
-        self._destination = destination
-        self._onDismiss = { selection.wrappedValue = nil }
-        self._isPresented = .init(
-            get: { selection.wrappedValue == tag },
-            set: { newValue in
-                if newValue {
-                    selection.wrappedValue = tag
-                } else {
-                    selection.wrappedValue = nil
+        self.init(
+            _destination: destination,
+            _isPresented: Binding(
+                get: { selection.wrappedValue == tag },
+                set: { newValue in
+                    if newValue {
+                        selection.wrappedValue = tag
+                    } else {
+                        selection.wrappedValue = nil
+                    }
                 }
-            }
+            ),
+            _onDismiss: { selection.wrappedValue = nil },
+            label: label(),
+            action: { }
         )
-        
-        self.label = label()
-        self.action = { }
     }
 }
 
