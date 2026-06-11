@@ -222,7 +222,10 @@ extension _TargetPlatformConditionalModifiable where Root: Scene, Platform == _S
         _ mode: SpecificTypes.NavigationBarItemTitleDisplayMode
     ) -> _TargetPlatformConditionalModifiable<some View, Platform> {
 #if os(iOS)
-        _TargetPlatformConditionalModifiable<_, Platform> {
+        // On Xcode 27 / Swift 6.4 the trailing-closure initializer is ambiguous
+        // with `init(root:)` and resolves to a function-typed `Root`. Wrap the
+        // content in a `Group` and pass it through the value initializer instead.
+        _TargetPlatformConditionalModifiable<_, Platform>(root: Group {
             switch mode {
                 case .automatic:
                     root.navigationBarTitleDisplayMode(.automatic)
@@ -231,7 +234,7 @@ extension _TargetPlatformConditionalModifiable where Root: Scene, Platform == _S
                 case .large:
                     root.navigationBarTitleDisplayMode(.inline)
             }
-        }
+        })
 #else
         self
 #endif
@@ -258,14 +261,15 @@ extension _TargetPlatformConditionalModifiable where Root: View, Platform == _Sw
     public func controlActiveState(
         _ state: _SwiftUI_TargetPlatform.macOS._ControlActiveState
     ) -> _TargetPlatformConditionalModifiable<some View, Platform> {
+        // On Xcode 27 / Swift 6.4 the trailing-closure initializer is ambiguous
+        // with `init(root:)` and resolves to a function-typed `Root`. Pass the
+        // content through the value initializer instead.
         #if os(macOS)
-        _TargetPlatformConditionalModifiable<_, Platform> {
+        _TargetPlatformConditionalModifiable<_, Platform>(root: Group {
             self.environment(\.controlActiveState, .init(state))
-        }
+        })
         #else
-        _TargetPlatformConditionalModifiable<_, Platform> {
-            self
-        }
+        _TargetPlatformConditionalModifiable<_, Platform>(root: self)
         #endif
     }
 }

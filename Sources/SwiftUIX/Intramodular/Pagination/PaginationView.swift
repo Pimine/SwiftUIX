@@ -50,11 +50,12 @@ public struct PaginationView<Page: View>: View {
     
     /// The current page index internally used by `PaginationView`.
     /// Never access this directly, it is marked public as a workaround to a compiler bug.
-    @inlinable
+    // `@inlinable` removed: on Xcode 27 / Swift 6.4 the `@State` macro and the
+    // `@DelayedState` wrapper synthesize `private` backing storage that cannot be
+    // referenced from an `@inlinable` context.
     @State public var _currentPageIndex = 0
-    
+
     /// Never access this directly, it is marked public as a workaround to a compiler bug.
-    @inlinable
     @DelayedState public var _progressionController: ProgressionController?
     
     private var _scrollViewConfiguration: CocoaScrollViewConfiguration<AnyView> = nil

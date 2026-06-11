@@ -9,7 +9,9 @@ import SwiftUI
 @propertyWrapper
 @_documentation(visibility: internal)
 public struct DelayedState<Value>: DynamicProperty {
-    @inlinable
+    // `@inlinable` removed: on Xcode 27 / Swift 6.4 `@State` is a macro whose
+    // generated backing storage (`__wrappedValue`) is `private` and cannot be
+    // referenced from an `@inlinable` context.
     @State public var _wrappedValue: Value
     
     /// The current state value.
