@@ -29,9 +29,15 @@ public struct PresentationLink<Destination: View, Label: View>: PresentationLink
     private let label: Label
     private let action: () -> Void
 
-    @State private var name: AnyHashable = UUID()
-    @State private var id: AnyHashable = UUID()
-    @State private var _internal_isPresented: Bool = false
+    // On Xcode 27 / Swift 6.4 the `@State` macro fails to emit a linkable
+    // default-value initializer for `private` default-valued properties in a
+    // generic type (undefined "variable initialization expression" symbols at
+    // link time when e.g. `PresentationLink<Popover<_>, _>` is specialized).
+    // Marking them public forces the storage/init to be emitted and exported,
+    // matching the existing workaround used in `PaginationView`.
+    @State public var name: AnyHashable = UUID()
+    @State public var id: AnyHashable = UUID()
+    @State public var _internal_isPresented: Bool = false
     
     private var isPresented: Binding<Bool> {
         let base = (_isPresented ?? $_internal_isPresented)
